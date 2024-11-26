@@ -27,12 +27,14 @@ type Domain struct {
 func main() {
 	var inputDomainName, inputEmail string
 
+	fmt.Println("Write a domain name:")
 	_, err := fmt.Scan(&inputDomainName)
 	if err != nil {
 		fmt.Println("Error reading domain name:", err)
 		return
 	}
 
+	fmt.Println("Write an email:")
 	_, err = fmt.Scan(&inputEmail)
 	if err != nil {
 		fmt.Println("Error reading email:", err)
@@ -64,7 +66,9 @@ func main() {
 	domains = append(domains, newDomain)
 	cfg[inputDomainName] = domains
 
-	serealizeIntoYaml(&cfg, domains)
+	serealizeIntoYaml(&cfg)
+
+	fmt.Printf("Added new domain: \n %+v\n", newDomain)
 }
 
 func generatePassword(length int) (string, error) {
@@ -81,7 +85,7 @@ func generatePassword(length int) (string, error) {
 	return string(password), nil
 }
 
-func readFromYaml(cfg *Config)  {
+func readFromYaml(cfg *Config) {
 	data, err := os.ReadFile("passwords.yaml")
 	if err != nil {
 		fmt.Println(err)
@@ -95,7 +99,7 @@ func readFromYaml(cfg *Config)  {
 	}
 }
 
-func serealizeIntoYaml(cfg *Config, domains []Domain) {
+func serealizeIntoYaml(cfg *Config) {
 	updatedData, err := yaml.Marshal(&cfg)
 	if err != nil {
 		fmt.Println(err)
@@ -107,6 +111,4 @@ func serealizeIntoYaml(cfg *Config, domains []Domain) {
 		fmt.Println(err)
 		return
 	}
-
-	fmt.Printf("Added new domain: \n %+v\n", domains)
 }
