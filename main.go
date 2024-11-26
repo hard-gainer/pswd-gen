@@ -15,7 +15,7 @@ const (
 	Symbols = "!@#$%^&*()[]{}?"
 )
 
-type Config map[string]Domain
+type Config map[string][]Domain
 
 type Domain struct {
 	Email    string `yaml:"email"`
@@ -45,7 +45,7 @@ func main() {
 	}
 
 	if cfg == nil {
-		cfg = make(map[string]Domain, 0)
+		cfg = make(map[string][]Domain, 0)
 	}
 
 	inputLength := 12
@@ -56,13 +56,19 @@ func main() {
 		return
 	}
 
+	domains := make([]Domain, 0)
+	if _, isPresent := cfg[inputDomainName]; isPresent {
+		domains = cfg[inputDomainName]
+	}
+
 	newDomain := Domain{
 		Email:    "new@example.com",
 		Password: newPassword,
 	}
-	cfg["google.com"] = newDomain
+	domains = append(domains, newDomain)
+	cfg[inputDomainName] = domains
 
-	serealizeIntoYaml(&cfg, newDomain)
+	serealizeIntoYaml(&cfg, domains)
 }
 
 func generatePassword(length int) (string, error) {
@@ -79,7 +85,7 @@ func generatePassword(length int) (string, error) {
 	return string(password), nil
 }
 
-func serealizeIntoYaml(cfg *Config, newDomain Domain) {
+func serealizeIntoYaml(cfg *Config, domains []Domain) {
 	// Сериализация данных обратно в YAML
 	updatedData, err := yaml.Marshal(&cfg)
 	if err != nil {
@@ -94,5 +100,5 @@ func serealizeIntoYaml(cfg *Config, newDomain Domain) {
 		return
 	}
 
-	fmt.Printf("Added new domain: \n %+v\n", newDomain)
+	fmt.Printf("Added new domain: \n %+v\n", domains)
 }
