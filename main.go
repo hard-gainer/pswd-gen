@@ -13,6 +13,8 @@ const (
 	Letters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 	Numbers = "0123456789"
 	Symbols = "!@#$%^&*()[]{}?"
+
+	passwordLength = 12
 )
 
 type Config map[string][]Domain
@@ -23,34 +25,28 @@ type Domain struct {
 }
 
 func main() {
-	var inputDomainName string
+	var inputDomainName, inputEmail string
 
 	_, err := fmt.Scan(&inputDomainName)
 	if err != nil {
-		fmt.Println("Error", err)
+		fmt.Println("Error reading domain name:", err)
 		return
 	}
 
-	data, err := os.ReadFile("passwords.yaml")
+	_, err = fmt.Scan(&inputEmail)
 	if err != nil {
-		fmt.Println(err)
+		fmt.Println("Error reading email:", err)
 		return
 	}
 
 	var cfg Config
-	err = yaml.Unmarshal(data, &cfg)
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
+	readFromYaml(&cfg)
 
 	if cfg == nil {
 		cfg = make(map[string][]Domain, 0)
 	}
 
-	inputLength := 12
-
-	newPassword, err := generatePassword(inputLength)
+	newPassword, err := generatePassword(passwordLength)
 	if err != nil {
 		fmt.Println(err)
 		return
@@ -62,7 +58,7 @@ func main() {
 	}
 
 	newDomain := Domain{
-		Email:    "new@example.com",
+		Email:    inputEmail,
 		Password: newPassword,
 	}
 	domains = append(domains, newDomain)
@@ -85,15 +81,27 @@ func generatePassword(length int) (string, error) {
 	return string(password), nil
 }
 
+func readFromYaml(cfg *Config)  {
+	data, err := os.ReadFile("passwords.yaml")
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	err = yaml.Unmarshal(data, &cfg)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+}
+
 func serealizeIntoYaml(cfg *Config, domains []Domain) {
-	// Сериализация данных обратно в YAML
 	updatedData, err := yaml.Marshal(&cfg)
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
 
-	// Запись обновленных данных в файл
 	err = os.WriteFile("passwords.yaml", updatedData, 0644)
 	if err != nil {
 		fmt.Println(err)
