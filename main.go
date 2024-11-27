@@ -6,6 +6,7 @@ import (
 	"math/big"
 	"os"
 
+	"github.com/charmbracelet/huh"
 	"gopkg.in/yaml.v2"
 )
 
@@ -27,18 +28,35 @@ type Domain struct {
 func main() {
 	var inputDomainName, inputEmail string
 
-	fmt.Println("Write a domain name:")
-	_, err := fmt.Scan(&inputDomainName)
-	if err != nil {
-		fmt.Println("Error reading domain name:", err)
-		return
-	}
+	form := huh.NewForm(
+		huh.NewGroup(
+			huh.NewInput().
+				Title("Write a domain name:").
+				Value(&inputDomainName).
+				Validate(func(s string) error {
+					if s == "" {
+						return fmt.Errorf("error: invalid domain name input")
+					}
+					return nil
+				}),
+		),
 
-	fmt.Println("Write an email:")
-	_, err = fmt.Scan(&inputEmail)
+		huh.NewGroup(
+			huh.NewInput().
+				Title("Write an email:").
+				Value(&inputEmail).
+				Validate(func(s string) error {
+					if s == "" {
+						return fmt.Errorf("error: invalid email input")
+					}
+					return nil
+				}),
+		),
+	)
+
+	err := form.Run()
 	if err != nil {
-		fmt.Println("Error reading email:", err)
-		return
+		fmt.Println("Error running form:", err)
 	}
 
 	var cfg Config
@@ -68,7 +86,7 @@ func main() {
 
 	serealizeIntoYaml(&cfg)
 
-	fmt.Printf("Added new domain: \n %+v\n", newDomain)
+	fmt.Printf("Added new domain: %+v\n", newDomain)
 }
 
 func generatePassword(length int) (string, error) {
