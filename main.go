@@ -30,13 +30,14 @@ type Domain struct {
 
 func main() {
 
+	// "c" - create flag to create an account in specific domain
 	// "f" - find flag to find all accounts on specific domain
 	// "u" - update flag to update an existing domain name or email
 	// "d" - delete flag to delete an existing account from domain or to
 	// delete an entire domain block
 	var (
 		createFlag = flag.Bool("c", false, "creates a new account")
-		// findFlag   = flag.Bool("f", false, "finds a specific domain")
+		findFlag   = flag.String("f", "", "finds a specific domain")
 		// updateFlag = flag.Bool("u", false, "updates a specific account in domain")
 		// deleteFlag = flag.Bool("d", false, "deletes a specific account in domain")
 	)
@@ -57,12 +58,16 @@ func main() {
 	switch {
 	case *createFlag:
 		if err := handleCreateRequest(); err != nil {
-			fmt.Println(err)
+			fmt.Println("Error:", err)
 		}
-		// case findFlag != nil:
-		// 	handleFindRequest()
-		// case updateFlag != nil:
-		// 	handleUpdateRequest()
+	case *findFlag != "":
+		if err := handleFindRequest(*findFlag); err != nil {
+			fmt.Println("Error:", err)
+		}
+	// case updateFlag != nil:
+	// 	if err := handleUpdateRequest(); err != nil {
+	// 		fmt.Println("Error:", err)
+	// 	}
 		// case deleteFlag != nil:
 		// 	handleDeleteRequest()
 	}
@@ -133,6 +138,22 @@ func handleCreateRequest() error {
 	}
 
 	fmt.Printf("Added new domain: %+v\n", newDomain)
+	return nil
+}
+
+func handleFindRequest(domain string) error {
+	var cfg Config
+
+	if err := loadConfigFromYaml(&cfg); err != nil {
+		return fmt.Errorf("error loading config: %w", err)
+	}
+
+	if val, isPresent := cfg[domain]; isPresent {
+		fmt.Println(val)
+	} else {
+        fmt.Printf("Domain %s not found\n", domain)
+    }
+
 	return nil
 }
 
