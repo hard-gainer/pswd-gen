@@ -2,9 +2,12 @@ package main
 
 import (
 	"crypto/rand"
+	"flag"
 	"fmt"
 	"math/big"
 	"os"
+	"os/signal"
+	"syscall"
 
 	"github.com/charmbracelet/huh"
 	"gopkg.in/yaml.v2"
@@ -26,6 +29,46 @@ type Domain struct {
 }
 
 func main() {
+
+	// "f" - find flag to find all accounts on specific domain
+	// "u" - update flag to update an existing domain name or email
+	// "d" - delete flag to delete an existing account from domain or to
+	// delete an entire domain block
+	var (
+		createFlag = flag.Bool("c", false, "creates a new account")
+		// findFlag   = flag.Bool("f", false, "finds a specific domain")
+		// updateFlag = flag.Bool("u", false, "updates a specific account in domain")
+		// deleteFlag = flag.Bool("d", false, "deletes a specific account in domain")
+	)
+
+	flag.Parse()
+
+	sigs := make(chan os.Signal, 1)
+	done := make(chan bool, 1)
+	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
+
+	go func() {
+		sig := <-sigs
+		fmt.Println()
+		fmt.Println(sig)
+		done <- true
+	}()
+
+	switch {
+	case *createFlag:
+		if err := handleCreateRequest(); err != nil {
+			fmt.Println(err)
+		}
+		// case findFlag != nil:
+		// 	handleFindRequest()
+		// case updateFlag != nil:
+		// 	handleUpdateRequest()
+		// case deleteFlag != nil:
+		// 	handleDeleteRequest()
+	}
+}
+
+func handleCreateRequest() error {
 	var inputDomainName, inputEmail string
 
 	form := huh.NewForm(
@@ -56,11 +99,13 @@ func main() {
 
 	err := form.Run()
 	if err != nil {
-		fmt.Println("Error running form:", err)
+		return fmt.Errorf("error running form: %w", err)
 	}
 
 	var cfg Config
-	readFromYaml(&cfg)
+	if err := loadConfigFromYaml(&cfg); err != nil {
+		return fmt.Errorf("error loading config: %w", err)
+	}
 
 	if cfg == nil {
 		cfg = make(map[string][]Domain, 0)
@@ -68,8 +113,7 @@ func main() {
 
 	newPassword, err := generatePassword(passwordLength)
 	if err != nil {
-		fmt.Println(err)
-		return
+		return fmt.Errorf("error generating password: %w", err)
 	}
 
 	domains := make([]Domain, 0)
@@ -84,9 +128,12 @@ func main() {
 	domains = append(domains, newDomain)
 	cfg[inputDomainName] = domains
 
-	serealizeIntoYaml(&cfg)
+	if err := serializeConfigToYaml(&cfg); err != nil {
+		return fmt.Errorf("error saving config: %w", err)
+	}
 
 	fmt.Printf("Added new domain: %+v\n", newDomain)
+	return nil
 }
 
 func generatePassword(length int) (string, error) {
@@ -103,30 +150,20 @@ func generatePassword(length int) (string, error) {
 	return string(password), nil
 }
 
-func readFromYaml(cfg *Config) {
+func loadConfigFromYaml(cfg *Config) error {
 	data, err := os.ReadFile("passwords.yaml")
 	if err != nil {
-		fmt.Println(err)
-		return
+		return err
 	}
 
-	err = yaml.Unmarshal(data, &cfg)
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
+	return yaml.Unmarshal(data, &cfg)
 }
 
-func serealizeIntoYaml(cfg *Config) {
+func serializeConfigToYaml(cfg *Config) error {
 	updatedData, err := yaml.Marshal(&cfg)
 	if err != nil {
-		fmt.Println(err)
-		return
+		return err
 	}
 
-	err = os.WriteFile("passwords.yaml", updatedData, 0644)
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
+	return os.WriteFile("passwords.yaml", updatedData, 0644)
 }
