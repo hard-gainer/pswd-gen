@@ -39,7 +39,9 @@ func main() {
 		createFlag = flag.Bool("c", false, "creates a new account")
 		findFlag   = flag.String("f", "", "finds a specific domain")
 		// updateFlag = flag.Bool("u", false, "updates a specific account in domain")
-		// deleteFlag = flag.Bool("d", false, "deletes a specific account in domain")
+		deleteFlag = flag.String("d", "", 
+			"deletes a specific account in domain" +
+			"or a full domain if all accounts are selected")
 	)
 
 	flag.Parse()
@@ -64,12 +66,14 @@ func main() {
 		if err := handleFindRequest(*findFlag); err != nil {
 			fmt.Println("Error:", err)
 		}
-	// case updateFlag != nil:
+	// case *updateFlag != nil:
 	// 	if err := handleUpdateRequest(); err != nil {
 	// 		fmt.Println("Error:", err)
 	// 	}
-		// case deleteFlag != nil:
-		// 	handleDeleteRequest()
+	case *deleteFlag != "":
+		if err := handleDeleteRequest(*deleteFlag); err != nil {
+			fmt.Println("Error:", err)
+		}
 	}
 }
 
@@ -133,7 +137,7 @@ func handleCreateRequest() error {
 	domains = append(domains, newDomain)
 	cfg[inputDomainName] = domains
 
-	if err := serializeConfigToYaml(&cfg); err != nil {
+	if err := saveConfigToYaml(&cfg); err != nil {
 		return fmt.Errorf("error saving config: %w", err)
 	}
 
@@ -151,9 +155,69 @@ func handleFindRequest(domain string) error {
 	if val, isPresent := cfg[domain]; isPresent {
 		fmt.Println(val)
 	} else {
-        fmt.Printf("Domain %s not found\n", domain)
-    }
+		fmt.Printf("Domain %s not found\n", domain)
+	}
 
+	return nil
+}
+
+func handleDeleteRequest(domain string) error {
+	var cfg Config
+
+	if err := loadConfigFromYaml(&cfg); err != nil {
+		return fmt.Errorf("error loading config: %w", err)
+	}
+
+	domains, isPresent := cfg[domain]
+	if !isPresent {
+		fmt.Printf("Domain %s not found\n", domain)
+	}
+
+	var selected []Domain
+
+	options := make([]huh.Option[Domain], len(domains))
+	for i, d := range domains {
+		options[i] = huh.NewOption(d.Email, d)
+	}
+
+	form := huh.NewForm(
+		huh.NewGroup(
+			huh.NewMultiSelect[Domain]().
+				Title("Selecte accounts to delete:").
+				Options(options...).
+				Value(&selected),
+		),
+	)
+
+	if err := form.Run(); err != nil {
+		return fmt.Errorf("error running form: %w", err)
+	}
+
+	remaining := make([]Domain, 0)
+	for _, d := range domains {
+		isSelected := false
+		for _, s := range selected {
+			if d.Email == s.Email {
+				isSelected = true
+				break
+			}
+		}
+		if !isSelected {
+			remaining = append(remaining, d)
+		}
+	}
+
+	if len(remaining) == 0 {
+		delete(cfg, domain)
+	} else {
+		cfg[domain] = remaining
+	}
+
+	if err := saveConfigToYaml(&cfg); err != nil {
+		return fmt.Errorf("error saving config: %w", err)
+	}
+
+	fmt.Printf("Successfully deleted selected accounts from %s\n", domain)
 	return nil
 }
 
@@ -180,7 +244,7 @@ func loadConfigFromYaml(cfg *Config) error {
 	return yaml.Unmarshal(data, &cfg)
 }
 
-func serializeConfigToYaml(cfg *Config) error {
+func saveConfigToYaml(cfg *Config) error {
 	updatedData, err := yaml.Marshal(&cfg)
 	if err != nil {
 		return err
