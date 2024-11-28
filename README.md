@@ -37,10 +37,31 @@ sudo mv accountmanager /usr/local/bin/
 Приложение предоставляет несколько команд для управления учетными записями:
 
 - Создание нового аккаунта
-```accountmanager -c```
+```
+    accountmanager -c
+```
+Response:
+```
+    Write a domain name: example.com
+    Write an email: user@example.com
+    Added new domain: {Email:user@example.com Password:Abc123!@#}
+```
 
 - Поиск аккаунтов по домену
-```accountmanager -f example.com```
+```
+    accountmanager -f example.com
+```
+Response:
+```
+    [{Email:user@example.com Password:Abc123!@#}]
+```
 
 - Удаление аккаунтов
-```accountmanager -d example.com```
+```
+    accountmanager -d example.com
+```
+Response:
+```
+    Select accounts to delete:
+    [ ] user@example.com
+```
