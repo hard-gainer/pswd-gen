@@ -21,6 +21,8 @@ const (
 	passwordLength = 12
 )
 
+var configPath string
+
 type Config map[string][]Domain
 
 type Domain struct {
@@ -29,6 +31,15 @@ type Domain struct {
 }
 
 func main() {
+	var err error
+
+	configPath, err = getConfigPath()
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+
+	fmt.Println("Using config file at:", configPath)
 
 	// "c" - create flag to create an account in specific domain
 	// "f" - find flag to find all accounts on specific domain
@@ -39,9 +50,9 @@ func main() {
 		createFlag = flag.Bool("c", false, "creates a new account")
 		findFlag   = flag.String("f", "", "finds a specific domain")
 		// updateFlag = flag.Bool("u", false, "updates a specific account in domain")
-		deleteFlag = flag.String("d", "", 
-			"deletes a specific account in domain" +
-			"or a full domain if all accounts are selected")
+		deleteFlag = flag.String("d", "",
+			"deletes a specific account in domain"+
+				"or a full domain if all accounts are selected")
 	)
 
 	flag.Parse()
@@ -75,6 +86,14 @@ func main() {
 			fmt.Println("Error:", err)
 		}
 	}
+}
+
+func getConfigPath() (string, error) {
+	if configEnv := os.Getenv("PSWD_CFG"); configEnv != "" {
+		return configEnv, nil
+	}
+
+	return "", fmt.Errorf("error: environment variable PSWD_CFG is not set")
 }
 
 func handleCreateRequest() error {
@@ -236,7 +255,7 @@ func generatePassword(length int) (string, error) {
 }
 
 func loadConfigFromYaml(cfg *Config) error {
-	data, err := os.ReadFile("passwords.yaml")
+	data, err := os.ReadFile(configPath)
 	if err != nil {
 		return err
 	}
@@ -250,5 +269,5 @@ func saveConfigToYaml(cfg *Config) error {
 		return err
 	}
 
-	return os.WriteFile("passwords.yaml", updatedData, 0644)
+	return os.WriteFile(configPath, updatedData, 0644)
 }
